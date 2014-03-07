@@ -1,0 +1,7 @@
+var authForm = {
+	accountType:"HOSTED_OR_GOOGLE",
+	Email:YOUR EMAIL HERE,
+	Passwd:YOUR (ADMITTEDLY PLAINTEXT) PASSWORD HERE (SORRY),
+	source:"RobStolarz-shazync-0.1",
+	service:"sj"
+};
