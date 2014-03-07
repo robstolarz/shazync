@@ -1,0 +1,12 @@
+{
+	"name":"shazync",
+	"dependencies":{
+		"request":">=2.27.0",
+		"sqlite3":">=2.1.19",
+		"async":">=0.2.9",
+		"uuid":">=1.4.1",
+		"ssh2":"*",
+		"read":"*",
+		"function-rate-limit":">=0.0.1"
+	}
+}
