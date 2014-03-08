@@ -5,3 +5,4 @@ qdb.serialize();
 qdb.run("create table if not exists cache (query varchar(255) primary key, tid varchar(27));create unique index index on (query,tid)",function(err){console.log(err);});
 qdb.run("insert into cache (query,tid) values (?,?)",["Torn","Tscgotvcxt4njisgyugmtct43r4"],function(err){console.log(err);});
 qdb.get("select query, tid from cache where query==?","Torn",function(err,row){console.log(row);});
+qdb.get("select query, tid from cache where query==?","DONGS",function(err,row){console.log(row);});

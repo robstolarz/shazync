@@ -26,6 +26,9 @@ if (!String.prototype.format) {
 var plid;
 var authForm = JSON.parse(fs.readFileSync(__dirname+"/auth.json"));
 var qcount;
+var qdb = new sqlite3.Database("querycache.sqlite");
+//qdb.serialize(); //more like NOPE as long as we don't have to
+qdb.run("create table if not exists cache (query varchar(255) primary key, tid varchar(27));create unique index index on (query,tid)",function(err){console.log(err);});
 function reqCall(songids,plid){
 	if(--qcount<=0){
 		if(!plid)throw new Error("missing playlist identifier: the request to make or find a playlist may have timed out");
@@ -83,7 +86,21 @@ function reqCall(songids,plid){
 		
 	}
 }
-var queryServer = limit(25,60000,function(songids,query){
+function addSongID(nid,title,songids){
+	songids.push(nid);
+	console.log('{0}: Song "{1}" with ID {2}'.format(songids.length,title,nid));
+}
+function queryID(songids,query,plid){
+	qdb.get("select query, tid from cache where query==?",query,function(err,row){
+		if(!row)
+			queryServer(songids,query,plid);
+		else {
+			addSongID(row.tid,query,songids);
+			return reqCall(songids,plid);
+		}
+	});
+}
+var queryServer = limit(25,60000,function(songids,query,plid){
 	request.get({
 		headers:{
 			Authorization:auth
@@ -103,10 +120,10 @@ var queryServer = limit(25,60000,function(songids,query){
 				break;
 			}
 		}
-		if(out && !(out in songids)){
-			songids.push(out.track.nid);
-			console.log('{0}: Song "{1}" with ID {2}'.format(songids.length,out.track.title,out.track.nid));
-			
+		if(out){
+			qdb.run("insert into cache (query,tid) values (?,?)",[query,out.track.nid],function(err){});
+			if(!(out in songids))
+				addSongID(out.track.nid,out.track.title,songids);
 		}
 		return reqCall(songids,plid);
 		//throw new Error("DONGS");
@@ -121,7 +138,6 @@ request.post('https://www.google.com/accounts/ClientLogin',function(error,respon
 	console.log(body);*/
 	
 	auth = "GoogleLogin auth="+authregex.exec(body)[1];
-	var plid;
 	request.post(
 		{
 			headers:{
@@ -168,7 +184,7 @@ request.post('https://www.google.com/accounts/ClientLogin',function(error,respon
 			if(!(query in sentqueries)){
 				
 				sentqueries.push(query);
-				queryServer(songids,query);
+				queryID(songids,query,plid);
 					//add
 					
 			} else 
@@ -186,7 +202,7 @@ request.post('https://www.google.com/accounts/ClientLogin',function(error,respon
 //points.sort(function(a,b){return a-b}); //numerically ascending
 }
 function getDB(){
-var Connection = require('ssh2')
+var Connection = require('ssh2'),
 fs = require('fs');
 
 read({prompt:"What is your iPhone's IP Address? "}, function(err,ans,isDefault) {
