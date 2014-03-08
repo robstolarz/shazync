@@ -24,7 +24,7 @@ if (!String.prototype.format) {
   };
 }
 var plid;
-var authForm = JSON.parse(fs.readFileSync(__dirname+auth.json));
+var authForm = JSON.parse(fs.readFileSync(__dirname+"/auth.json"));
 var qcount;
 function reqCall(songids,plid){
 	if(--qcount<=0){
@@ -203,10 +203,12 @@ read({prompt:"What is your iPhone's IP Address? "}, function(err,ans,isDefault) 
 	                }
 	 
 	                console.log( "SFTP started." );
-	                //fs.mkdirSync("temp");
+	                if(!fs.existsSync(__dirname+"/temp"))
+				fs.mkdirSync(__dirname+"/temp");
 	                var dbname;
 	                console.log("Saving to {0}".format(dbname = 'temp/{0}.sqlite'.format(Date.now())));
-	                var readStream = sftp.createReadStream('/var/mobile/Applications/760CC28C-C5E7-4735-BC36-9E67AFBE4FD2/Documents/ShazamDataModel.sqlite'),
+			var shazamlocation = '/var/mobile/Applications/{0}/Documents/ShazamDataModel.sqlite'.format(fs.readFileSync(__dirname+"/shazamlocation"));
+	                var readStream = sftp.createReadStream(shazamlocation),
 	                writeStream = fs.createWriteStream(dbname);
 	 
 	 		
@@ -224,11 +226,11 @@ read({prompt:"What is your iPhone's IP Address? "}, function(err,ans,isDefault) 
 	                console.log("Transferring main DB...");
 	                readStream.pipe( writeStream );
 	                console.log("Triggering shm transfer");
-	                readStream = sftp.createReadStream('/var/mobile/Applications/760CC28C-C5E7-4735-BC36-9E67AFBE4FD2/Documents/ShazamDataModel.sqlite-shm'),
+	                readStream = sftp.createReadStream(shazamlocation+'-shm'),
 	                writeStream = fs.createWriteStream(dbname+'-shm');
 	                readStream.pipe( writeStream );
 	                console.log("Triggering wal transfer");
-	                readStream = sftp.createReadStream('/var/mobile/Applications/760CC28C-C5E7-4735-BC36-9E67AFBE4FD2/Documents/ShazamDataModel.sqlite-wal'),
+	                readStream = sftp.createReadStream(shazamlocation+'-wal'),
 	                writeStream = fs.createWriteStream(dbname+'-wal');
 	                readStream.pipe( writeStream );
 	            }
