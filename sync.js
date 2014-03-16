@@ -23,7 +23,6 @@ if (!String.prototype.format) {
     });
   };
 }
-var plid;
 var authForm = JSON.parse(fs.readFileSync(__dirname+"/auth.json"));
 var qcount;
 var qdb = new sqlite3.Database("querycache.sqlite");
@@ -129,7 +128,34 @@ var queryServer = limit(25,60000,function(songids,query,plid){
 		//throw new Error("DONGS");
 	});
 });
+
+function doDatabase(plid,db){
+	var sentqueries = [];
+	var songids = [];
+	db.get('select COUNT(ZNAME) from ZSHTAGRESULTMO',function(err,row){qcount=row["COUNT(ZNAME)"];});
+	db.each('select ZNAME,ZCACHEDARTISTSTRING from ZSHTAGRESULTMO',function(err,row){
+		//task function
+		
+		row = row.ZNAME+" "+(row.ZCACHEDARTISTSTRING||"");
+		var query = row.replace(nameregex,' ');
+		console.log("Query: "+query);
+		if(!(query in sentqueries)){
+			
+			sentqueries.push(query);
+			queryID(songids,query,plid);
+				//add
 				
+		} else 
+			reqCall(songids,plid);
+	},function(err,num){
+		//completion function
+		console.log("Task initiated upon {0} rows.".format(num||"no"));
+		if(err)
+			console.log(err);
+		console.log("DONGS");
+	});
+}
+
 function doGoogle(db){
 console.log("Using database from "+db);
 var db = new sqlite3.Database(db);
@@ -168,34 +194,14 @@ request.post('https://www.google.com/accounts/ClientLogin',function(error,respon
 					body:sbody
 				},function(error,session,body){
 					console.log("MADE A NEW ONE");
-					console.log(plid = JSON.parse(body).mutate_response[0].id);
+					plid = JSON.parse(body).mutate_response[0].id;
+					console.log(plid);
+					doDatabase(plid,db);
 				}
 			);
-		}
-		var sentqueries = [];
-		var songids = [];
-		db.get('select COUNT(ZNAME) from ZSHTAGRESULTMO',function(err,row){qcount=row["COUNT(ZNAME)"];});
-		db.each('select ZNAME,ZCACHEDARTISTSTRING from ZSHTAGRESULTMO',function(err,row){
-			//task function
-			
-			row = row.ZNAME+" "+(row.ZCACHEDARTISTSTRING||"");
-			var query = row.replace(nameregex,' ');
-			console.log("Query: "+query);
-			if(!(query in sentqueries)){
-				
-				sentqueries.push(query);
-				queryID(songids,query,plid);
-					//add
-					
-			} else 
-				reqCall(songids,plid);
-		},function(err,num){
-			//completion function
-			console.log("Task initiated upon {0} rows.".format(num||"no"));
-			if(err)
-				console.log(err);
-			console.log("DONGS");
-		});
+		}else
+			doDatabase(plid,db);
+		
 	});
 	
 }).form(authForm);
