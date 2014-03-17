@@ -2,3 +2,4 @@ node_modules
 temp
 *.sqlite
 auth.json
+syncout.log

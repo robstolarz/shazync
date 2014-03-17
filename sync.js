@@ -1,7 +1,7 @@
 var request = require('request'),
 sqlite3 = require('sqlite3'),
 authregex = /Auth\=([^$ \n]+)[$ \n]/,
-nameregex = /[^a-zA-Z0-9\'.,:;!]+/g,
+nameregex = /[^a-zA-Z0-9\'.,:;!\"\(\{\[\)\}\]]+/g,
 acceptregex = /([Kk]araoke|[Ll]ive|[Ii]n the style of)+/g,
 qs = require('querystring')
 async = require('async'),
@@ -89,42 +89,71 @@ function addSongID(nid,title,songids){
 	songids.push(nid);
 	console.log('{0}: Song "{1}" with ID {2}'.format(songids.length,title,nid));
 }
-function queryID(songids,query,plid){
+function queryID(songids,query,plid,retry){
+	if(!retry)
+		retry=0;
 	qdb.get("select query, tid from cache where query==?",query,function(err,row){
 		if(!row)
-			queryServer(songids,query,plid);
+			queryServer(songids,query,plid,retry);
 		else {
 			addSongID(row.tid,query,songids);
 			return reqCall(songids,plid);
 		}
 	});
 }
-var queryServer = limit(25,60000,function(songids,query,plid){
+var unscrew = [
+	/([\(\{\[].*[\)\]\}])/, //remove parenthesis
+	/([fF]eat(?:\.?|urin|uring)?.*)/, //remove "Featuring. artist"
+	
+]; //I recommend http://www.regexper.com/
+function retryQuery(songids,plid,retry,query){
+	if(retry>0)
+		return reqCall(songids,plid)
+	else{
+		//do the unparenthesis go
+		console.log("RETRY");
+		
+		for(var i=0;i<unscrew.length;++i)
+			query = query.replace(unscrew[i]," ");
+		console.log(query);
+		queryID(songids,query,plid,++retry);
+	}
+}
+var queryServer = limit(40,60000,function(songids,query,plid,retry){
 	request.get({
 		headers:{
 			Authorization:auth
 		},
 		url:'https://www.googleapis.com/sj/v1.1/query?q={0}&max-results=5'.format(query)
 	},function(error,response,body){
-		
+		console.log(query);
 		//console.log(error);
 		var thing = JSON.parse(body).entries;
-		if(!thing)
-			return reqCall(songids,plid);
-		var out = null;
-		for(var i=0;i<thing.length;i++){
-			if(thing[i].type==1&&!acceptregex.test(thing[i].track.title)&&!acceptregex.test(thing[i].track.album)&&!acceptregex.test(thing[i].track.artist)){
-				out = thing[i];
-				//console.log(thing[i]);
-				break;
-			}
+		if(!thing){
+			console.log(body);
+			return retryQuery(songids,plid,retry,query);
+		}else{
+			var out = null;
+			var some = 0;
+			for(var i=0;i<thing.length;i++){
+				if(retry>0)
+					console.log(thing[i]);
+				if(thing[i].type==1){
+					if(!acceptregex.test(thing[i].track.title)&&!acceptregex.test(thing[i].track.album)&&!acceptregex.test(thing[i].track.artist)){
+						out = thing[i];
+						//console.log(thing[i]);
+						break;
+					}
+				}
+			}			
+			if(out){
+				qdb.run("insert into cache (query,tid) values (?,?)",[query,out.track.nid],function(err){});
+				if(!(out in songids))
+					addSongID(out.track.nid,out.track.title,songids);
+			}else
+				retryQuery(songids,plid,retry,query);
+			return reqCall(songids,plid);			
 		}
-		if(out){
-			qdb.run("insert into cache (query,tid) values (?,?)",[query,out.track.nid],function(err){});
-			if(!(out in songids))
-				addSongID(out.track.nid,out.track.title,songids);
-		}
-		return reqCall(songids,plid);
 		//throw new Error("DONGS");
 	});
 });
@@ -133,7 +162,7 @@ function doDatabase(plid,db){
 	var sentqueries = [];
 	var songids = [];
 	db.get('select COUNT(ZNAME) from ZSHTAGRESULTMO',function(err,row){qcount=row["COUNT(ZNAME)"];});
-	db.each('select ZNAME,ZCACHEDARTISTSTRING from ZSHTAGRESULTMO',function(err,row){
+	db.each('select ROWID,ZNAME,ZCACHEDARTISTSTRING from ZSHTAGRESULTMO',function(err,row){
 		//task function
 		
 		row = row.ZNAME+" "+(row.ZCACHEDARTISTSTRING||"");
