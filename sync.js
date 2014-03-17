@@ -87,6 +87,7 @@ function reqCall(songids,plid){
 }
 function addSongID(nid,title,songids){
 	songids.push(nid);
+	qdb.run("insert into cache (query,tid) values (?,?)",[title,nid],function(err){});
 	console.log('{0}: Song "{1}" with ID {2}'.format(songids.length,title,nid));
 }
 function queryID(songids,query,plid,retry){
@@ -128,7 +129,9 @@ var queryServer = limit(40,60000,function(songids,query,plid,retry){
 	},function(error,response,body){
 		console.log(query);
 		//console.log(error);
-		var thing = JSON.parse(body).entries;
+		var thing;
+		
+			thing = JSON.parse(body).entries;
 		if(!thing){
 			console.log(body);
 			return retryQuery(songids,plid,retry,query);
@@ -147,9 +150,10 @@ var queryServer = limit(40,60000,function(songids,query,plid,retry){
 				}
 			}			
 			if(out){
-				qdb.run("insert into cache (query,tid) values (?,?)",[query,out.track.nid],function(err){});
+				
 				if(!(out in songids))
 					addSongID(out.track.nid,out.track.title,songids);
+				return;
 			}else
 				retryQuery(songids,plid,retry,query);
 			return reqCall(songids,plid);			
