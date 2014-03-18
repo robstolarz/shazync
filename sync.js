@@ -103,7 +103,7 @@ function queryID(songids,query,plid,retry){
 	});
 }
 var unscrew = [
-	/([\(\{\[].*[\)\]\}])/, //remove parenthesis
+	/([\(\{\[].*[\)\]\}])+/, //remove parenthesis
 	/([fF]eat(?:\.?|urin).*)/, //remove "Featuring. artist"
 	
 ]; //I recommend http://www.regexper.com/
