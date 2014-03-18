@@ -130,8 +130,11 @@ var queryServer = limit(40,60000,function(songids,query,plid,retry){
 		console.log(query);
 		//console.log(error);
 		var thing;
-		
+		try{
 			thing = JSON.parse(body).entries;
+		}catch(err){
+			console.log(err);
+		}
 		if(!thing){
 			console.log(body);
 			return retryQuery(songids,plid,retry,query);
@@ -153,10 +156,9 @@ var queryServer = limit(40,60000,function(songids,query,plid,retry){
 				
 				if(!(out in songids))
 					addSongID(out.track.nid,out.track.title,songids);
-				return;
+				return reqCall(songids,plid);	
 			}else
 				retryQuery(songids,plid,retry,query);
-			return reqCall(songids,plid);			
 		}
 		//throw new Error("DONGS");
 	});
