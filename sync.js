@@ -104,7 +104,7 @@ function queryID(songids,query,plid,retry){
 }
 var unscrew = [
 	/([\(\{\[].*[\)\]\}])/, //remove parenthesis
-	/([fF]eat(?:\.?|urin|uring)?.*)/, //remove "Featuring. artist"
+	/([fF]eat(?:\.?|urin).*)/, //remove "Featuring. artist"
 	
 ]; //I recommend http://www.regexper.com/
 function retryQuery(songids,plid,retry,query){
