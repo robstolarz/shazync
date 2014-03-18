@@ -27,7 +27,7 @@ var authForm = JSON.parse(fs.readFileSync(__dirname+"/auth.json"));
 var qcount;
 var qdb = new sqlite3.Database("querycache.sqlite");
 //qdb.serialize(); //more like NOPE as long as we don't have to
-qdb.run("create table if not exists cache (query varchar(255) primary key, tid varchar(27));create unique index index on (query,tid)",function(err){console.log(err);});
+qdb.run("create table if not exists cache (query varchar(255) PRIMARY KEY, tid varchar(27));create unique index index on (query,tid)",function(err){console.log(err);});
 function reqCall(songids,plid){
 	if(--qcount<=0){
 		if(!plid)throw new Error("missing playlist identifier: the request to make or find a playlist may have timed out");
@@ -85,9 +85,9 @@ function reqCall(songids,plid){
 		
 	}
 }
-function addSongID(nid,title,songids){
+function addSongID(nid,title,songids,query){
 	songids.push(nid);
-	qdb.run("insert into cache (query,tid) values (?,?)",[title,nid],function(err){});
+	qdb.run("insert into cache (query,tid) values (?,?)",[query||title,nid],function(err){});
 	console.log('{0}: Song "{1}" with ID {2}'.format(songids.length,title,nid));
 }
 function queryID(songids,query,plid,retry){
@@ -155,7 +155,7 @@ var queryServer = limit(40,60000,function(songids,query,plid,retry){
 			if(out){
 				
 				if(!(out in songids))
-					addSongID(out.track.nid,out.track.title,songids);
+					addSongID(out.track.nid,out.track.title,songids,query);
 				return reqCall(songids,plid);	
 			}else
 				retryQuery(songids,plid,retry,query);
