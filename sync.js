@@ -2,7 +2,7 @@ var request = require('request'),
 sqlite3 = require('sqlite3'),
 authregex = /Auth\=([^$ \n]+)[$ \n]/,
 nameregex = /[^a-zA-Z0-9\'.,:;!\"\(\{\[\)\}\]]+/g,
-acceptregex = /([Kk]araoke|[Ll]ive|[Ii]n the style of)+/g,
+acceptregex = /([Kk]araoke|[Ll]ive|[Ii]n [Tt]he [Ss]tyle [Oo]f)+/g,
 qs = require('querystring')
 async = require('async'),
 uuid = require('uuid'),
