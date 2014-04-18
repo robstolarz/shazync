@@ -243,8 +243,7 @@ request.post('https://www.google.com/accounts/ClientLogin',function(error,respon
 //points.sort(function(a,b){return a-b}); //numerically ascending
 }
 
-function actuallyGet(loc) {
-	var shazamlocation = '/var/mobile/Applications/{0}/Documents/ShazamDataModel.sqlite'.format(loc);
+function actuallyGet(shazamlocation,dbname,sftp) {
 	var readStream = sftp.createReadStream(shazamlocation),
 	writeStream = fs.createWriteStream(dbname);
 
@@ -290,11 +289,27 @@ function getDB(){
 				}
 		 
 				console.log( "SFTP started." );
-				if(!fs.existsSync(__dirname+"/temp"))
+				if(!fs.existsSync(__dirname+"/temp")) //I don't care
 					fs.mkdirSync(__dirname+"/temp");
 				var dbname;
 				console.log("Saving to {0}".format(dbname = 'temp/{0}.sqlite'.format(Date.now())));
-				actuallyGet();
+				
+				sftp.opendir('/var/mobile/Applications/',function(err,handle){
+					sftp.readdir(handle,function(err,list){
+						var filenames = list.map(function(x){return x.filename});
+						var traversalDirRE = /(?:\.|\.\.)$/;
+						filenames.forEach(function(x){ 
+							console.log(x);
+							if(!(traversalDirRE.test(x))){
+								var shazamlocation = '/var/mobile/Applications/{0}/Documents/ShazamDataModel.sqlite'.format(x);
+								sftp.stat(shazamlocation,function(err,handle){
+									if(!err)
+										actuallyGet(shazamlocation,dbname,sftp);
+								});
+							}
+						});
+					});
+				});
 			    }
 			);
 		    }
