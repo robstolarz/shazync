@@ -36,6 +36,11 @@ function reqCall(songids,plid){
 		var lastCId = null,
 		 nextCId = uuid.v1()
 		 clientId = uuid.v1();
+		
+		var songids = songids.filter(function(elem, pos) { //dedupe
+		    return songids.indexOf(elem) == pos;
+		});
+		
 		for(var i=0;i<songids.length;i++){
 			var details = {
 		                'clientId': clientId,
