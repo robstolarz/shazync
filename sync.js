@@ -242,67 +242,72 @@ request.post('https://www.google.com/accounts/ClientLogin',function(error,respon
 }).form(authForm);
 //points.sort(function(a,b){return a-b}); //numerically ascending
 }
-function getDB(){
-var Connection = require('ssh2'),
-fs = require('fs');
 
-read({prompt:"What is your iPhone's IP Address? "}, function(err,ans,isDefault) {
-	console.log("* Make sure your iPhone is awake.");
-	var c = new Connection();
-	c.on('connect',function () {console.log( "Connection succeeded." );});
-	c.on('ready',function () {
-	        console.log( "Ready." );
-	 
-	        c.sftp(function (err, sftp) {
-	                if ( err ) {
-	                    console.log( "Error, problem starting SFTP: %s", err );
-	                    process.exit( 2 );
-	                }
-	 
-	                console.log( "SFTP started." );
-	                if(!fs.existsSync(__dirname+"/temp"))
-				fs.mkdirSync(__dirname+"/temp");
-	                var dbname;
-	                console.log("Saving to {0}".format(dbname = 'temp/{0}.sqlite'.format(Date.now())));
-			var shazamlocation = '/var/mobile/Applications/{0}/Documents/ShazamDataModel.sqlite'.format(fs.readFileSync(__dirname+"/shazamlocation"));
-	                var readStream = sftp.createReadStream(shazamlocation),
-	                writeStream = fs.createWriteStream(dbname);
-	 
-	 		
-	                // what to do when transfer finishes
-	                writeStream.on(
-	                    'close',
-	                    function () {
-	                        console.log( "Got it! :D" );
-	                        sftp.end();
-	                        doGoogle(dbname);
-	                    }
-	                );
-	 
-	                // initiate transfer of file
-	                console.log("Transferring main DB...");
-	                readStream.pipe( writeStream );
-	                console.log("Triggering shm transfer");
-	                readStream = sftp.createReadStream(shazamlocation+'-shm'),
-	                writeStream = fs.createWriteStream(dbname+'-shm');
-	                readStream.pipe( writeStream );
-	                console.log("Triggering wal transfer");
-	                readStream = sftp.createReadStream(shazamlocation+'-wal'),
-	                writeStream = fs.createWriteStream(dbname+'-wal');
-	                readStream.pipe( writeStream );
-	            }
-	        );
+function actuallyGet(loc) {
+	var shazamlocation = '/var/mobile/Applications/{0}/Documents/ShazamDataModel.sqlite'.format(loc);
+	var readStream = sftp.createReadStream(shazamlocation),
+	writeStream = fs.createWriteStream(dbname);
+
+	
+	// what to do when transfer finishes
+	writeStream.on(
+	    'close',
+	    function () {
+		console.log( "Got it! :D" );
+		sftp.end();
+		doGoogle(dbname);
 	    }
 	);
-	
-	
-	c.connect({
-		host:ans,
-		username:'mobile',
-		password:'alpine'
+
+	// initiate transfer of file
+	console.log("Transferring main DB...");
+	readStream.pipe( writeStream );
+	console.log("Triggering shm transfer");
+	readStream = sftp.createReadStream(shazamlocation+'-shm'),
+	writeStream = fs.createWriteStream(dbname+'-shm');
+	readStream.pipe( writeStream );
+	console.log("Triggering wal transfer");
+	readStream = sftp.createReadStream(shazamlocation+'-wal'),
+	writeStream = fs.createWriteStream(dbname+'-wal');
+	readStream.pipe( writeStream );
+};
+
+function getDB(){
+	var Connection = require('ssh2'),
+	fs = require('fs');
+
+	read({prompt:"What is your iPhone's IP Address? "}, function(err,ans,isDefault) {
+		console.log("* Make sure your iPhone is awake.");
+		var c = new Connection();
+		c.on('connect',function () {console.log( "Connection succeeded." );});
+		c.on('ready',function () {
+			console.log( "Ready." );
+		 
+			c.sftp(function (err, sftp) {
+				if ( err ) {
+				    console.log( "Error, problem starting SFTP: %s", err );
+				    process.exit( 2 );
+				}
+		 
+				console.log( "SFTP started." );
+				if(!fs.existsSync(__dirname+"/temp"))
+					fs.mkdirSync(__dirname+"/temp");
+				var dbname;
+				console.log("Saving to {0}".format(dbname = 'temp/{0}.sqlite'.format(Date.now())));
+				actuallyGet();
+			    }
+			);
+		    }
+		);
+		
+		
+		c.connect({
+			host:ans,
+			username:'mobile',
+			password:'alpine'
+		});
+		//read.close();
 	});
-	//read.close();
-});
 }
 read({prompt:"Download DB from phone?(Y/N)[N]"},function(err,ans,isDefault){
 	if(ans=="N"||ans=="n"||isDefault){
